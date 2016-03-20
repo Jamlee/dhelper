@@ -1,0 +1,55 @@
+#!/bin/bash
+
+alias swarm="docker run --rm swarm"
+
+#switch docker-machine env
+function select-machine()
+{
+  eval `docker-machine env $1`
+}
+
+function create-machine-with-swarm()
+{
+  docker-machine create --engine-registry-mirror=https://dkjtgwoa.mirror.aliyuncs.com \
+    --virtualbox-hostonly-cidr "192.168.${2}.1/24" \
+    --swarm ${3} \
+    --engine-opt="cluster-store=zk://192.168.61.1:2181" \
+    --engine-opt="cluster-advertise=eth1:2376" \
+    --swarm-discovery="zk://192.168.61.1:2181" \
+    -d virtualbox ${1}
+}
+
+function create-machine()
+{
+  docker-machine create --engine-registry-mirror=https://dkjtgwoa.mirror.aliyuncs.com \
+    --virtualbox-hostonly-cidr "192.168.${2}.1/24" \
+    -d virtualbox ${1}
+}
+
+function dhelper()
+{
+  case $1 in
+    'create')
+      create-machine $2 $3 ;;
+    'rm')
+      docker-machine rm $2;;
+    'select')
+      select-machine $2 ;;
+    'create-with-swarm')
+      create-machine-with-swarm $2 $3 $4;;
+    *)
+      cat <<-DOC
+
+        refrence: https://docs.docker.com/swarm/provision-with-machine/
+
+        a helpful tool for creating machine and selecting the  machine 
+        
+        dhelper create hostA 62                               # create a host with ip 192.168.62.100
+        dhelper select-machine hostA                          #select current machine
+        dhelper create-with-swarm hostA 62                    # create a swarm node  
+        dhelper create-with-swarm hostA 62  master_node_name  # create a swarm node and master node is  master_node_name
+
+DOC
+      ;;
+  esac
+}
