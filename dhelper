@@ -2,6 +2,10 @@
 
 alias swarm="docker run --rm swarm"
 
+#found service
+serviceUrl="zk://192.168.61.1:2181"
+
+
 #switch docker-machine env
 function select-machine()
 {
@@ -13,9 +17,9 @@ function create-machine-with-swarm()
   docker-machine create --engine-registry-mirror=https://dkjtgwoa.mirror.aliyuncs.com \
     --virtualbox-hostonly-cidr "192.168.${2}.1/24" \
     --swarm ${3} \
-    --engine-opt="cluster-store=zk://192.168.61.1:2181" \
+    --engine-opt="cluster-store=${serviceUrl}" \
     --engine-opt="cluster-advertise=eth1:2376" \
-    --swarm-discovery="zk://192.168.61.1:2181" \
+    --swarm-discovery="${serviceUrl}" \
     -d virtualbox ${1}
 }
 
@@ -28,7 +32,8 @@ function create-machine()
 
 function dhelper()
 {
-  stty columns 400
+  originalWidth=`tput cols`
+  stty cols 1000
   case $1 in
     'create')
       create-machine $2 $3 ;;
@@ -42,30 +47,30 @@ function dhelper()
       docker images|grep \<none\>|awk '{print $3}' | xargs docker rmi;;
     'clean-all-container')
       docker rm -f $(docker ps -aq);;
-    'stat')
+    'stats')
       docker stats $(docker ps | awk '{if(NR>1) print $NF}');;
     *)
-      cat <<-'DOC'
+      cat <<DOC
 
         """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
         " Please install docker tool box before you run this
         """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
         refrence: https://docs.docker.com/swarm/provision-with-machine/
 
-        a helpful tool for creating machine and selecting the  machine 
-        
-        dhelper create hostA 62                               # create a host with static ip 192.168.62.100 and name `hostA`
-        dhelper select-machine hostA                          # select `hostA` machine
-        dhelper create-with-swarm hostA 62                    # create a swarm node  `hostA`
-        dhelper create-with-swarm hostA 62  master_node_name  # create a swarm node and master node is  `master_node_name`
+        a helpful tool for creating machine and selecting the  machine
+
+        dhelper create hostA 62                               # create a host with static ip 192.168.62.100 and name hostA
+        dhelper select-machine hostA                          # select hostA machine
+        dhelper create-with-swarm hostA 62                    # create a swarm node  hostA
+        dhelper create-with-swarm hostA 62  master_node_name  # create a swarm node and master node is master_node_name
         dhelper stats                                         # show all contianer stat
         dhelper clean-none                                    # clean all none contianer
-        dhelper clean-all-container                           # rm all container 
+        dhelper clean-all-container                           # rm all container
 
         # there only one valid method i have tried to assign a static ip for bootdocker. it is assign
         a whole network to per machine.
-
 DOC
       ;;
   esac
+  stty cols $originalWidth
 }
